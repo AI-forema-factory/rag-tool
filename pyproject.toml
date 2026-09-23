@@ -1,0 +1,50 @@
+[project]
+name = "rag-tool"
+version = "0.1.0"
+description = "Local retrieval service over markdown for AI agents (retrieval only, no generation)"
+readme = "README.md"
+authors = [
+    { name = "ai-git-forema", email = "ai-git-forema@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.141.1",
+    "fastembed>=0.8.1",
+    "pydantic-settings>=2.15.0",
+    "sqlite-vec>=0.1.9",
+    "uvicorn[standard]>=0.53.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.18,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "import-linter>=2.15",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "rag_tool"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture: api -> infrastructure -> application -> domain"
+type = "layers"
+layers = [
+    "rag_tool.api",
+    "rag_tool.infrastructure",
+    "rag_tool.application",
+    "rag_tool.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Core layers stay framework-free"
+type = "forbidden"
+source_modules = ["rag_tool.domain", "rag_tool.application"]
+forbidden_modules = ["fastapi", "pydantic", "pydantic_settings", "fastembed", "sqlite_vec"]
