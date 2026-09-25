@@ -73,6 +73,19 @@ class SqliteVecChunkRepository:
                     (cur.lastrowid, sqlite_vec.serialize_float32(list(vector))),
                 )
 
+    def remove_absent_sources(self, root: Path, present: set[str]) -> None:
+        root = root.resolve()
+        with self._lock, self._conn:
+            sources = [row[0] for row in self._conn.execute("SELECT DISTINCT source_path FROM chunks")]
+            for source in sources:
+                # Path components avoid sibling-prefix and SQL wildcard matches.
+                # Stored paths are absolute; do not resolve stale paths through symlinks.
+                if source in present or not Path(source).is_relative_to(root):
+                    continue
+                ids = self._conn.execute("SELECT id FROM chunks WHERE source_path = ?", (source,)).fetchall()
+                self._conn.executemany("DELETE FROM chunk_vectors WHERE rowid = ?", ids)
+                self._conn.execute("DELETE FROM chunks WHERE source_path = ?", (source,))
+
     def search(self, vector: Vector, top_k: int) -> list[SearchResult]:
         with self._lock:
             rows = self._conn.execute(
