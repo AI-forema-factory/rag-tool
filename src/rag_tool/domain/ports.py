@@ -14,6 +14,10 @@ class Embedder(Protocol):
 
 
 class ChunkRepository(Protocol):
+    def remove_absent_sources(self, root: Path, present: set[str]) -> None:
+        """Remove chunks and vectors absent from a complete scan of this root only."""
+        ...
+
     def replace_source(self, source_path: str, chunks: Sequence[Chunk], vectors: Sequence[Vector]) -> None:
         """Atomically replace all chunks previously stored for `source_path`."""
         ...

@@ -113,3 +113,19 @@ def test_filesystem_propagates_traversal_errors(tmp_path, monkeypatch):
     monkeypatch.setattr(os, "scandir", failed_scan)
     with pytest.raises(PermissionError):
         list(MarkdownFolderSource().list_markdown(tmp_path))
+
+
+def test_nested_root_and_symlink_alias_are_scoped(setup):
+    client, root, other, db = setup
+    nested = root / "nested_%"
+    nested.mkdir()
+    removed = nested / "gone.md"
+    removed.write_text("# Nested\nremove me")
+    assert client.post("/ingest", json={"path": str(root)}).status_code == 200
+    expected = [row for row in snapshot(db) if row[0] != str(removed)]
+    removed.unlink()
+    alias = root.parent / "alias"
+    alias.symlink_to(nested, target_is_directory=True)
+    assert client.post("/ingest", json={"path": str(alias)}).status_code == 200
+    assert snapshot(db) == expected
+    assert str(removed) not in query_paths(client)

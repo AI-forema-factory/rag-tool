@@ -19,14 +19,19 @@ class IngestService:
         self._repository = repository
 
     def ingest_folder(self, folder: Path) -> IngestReport:
+        folder = folder.resolve()
+        seen: set[str] = set()
         files = chunks = 0
         for path in self._source.list_markdown(folder):
             source_path = str(path)
             file_chunks = chunk_markdown(source_path, self._source.read_text(path))
             vectors = self._embedder.embed_passages([c.text for c in file_chunks]) if file_chunks else []
             self._repository.replace_source(source_path, file_chunks, vectors)
+            seen.add(source_path)
             files += 1
             chunks += len(file_chunks)
+        # Never reconcile after an interrupted scan, read, or embedding operation.
+        self._repository.remove_absent_sources(folder, seen)
         return IngestReport(files=files, chunks=chunks)
 
 

@@ -33,3 +33,16 @@ If sqlite-vec cannot be loaded, startup fails with `VectorExtensionError`; there
 (api → infrastructure → application → domain), enforced by import-linter
 (`[tool.importlinter]` in `pyproject.toml`). Domain and application must not import
 fastapi, pydantic, fastembed or sqlite-vec.
+
+Re-ingesting a folder reconciles its stored sources: after every markdown file is
+successfully read and embedded, chunks and vectors for absent paths under that
+folder are deleted. A successfully scanned empty folder clears that folder's
+stored chunks. Paths are scoped by directory components, so siblings and sources
+outside the requested root are preserved. Folder aliases are resolved before
+scanning; directory symlinks inside the tree are not traversed.
+
+Missing roots, traversal/read errors, and embedding failures abort ingestion
+without pruning absent sources. Earlier successful per-file replacements may
+remain if a later file fails; ingestion is not a whole-folder transaction. As
+before, scans do not provide a snapshot of concurrent filesystem edits, so avoid
+changing the folder or issuing overlapping ingestions during reconciliation.
